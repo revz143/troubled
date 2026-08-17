@@ -1,0 +1,4 @@
+-- Local development seed.
+-- Keep this file present because supabase/config.toml runs it after migrations.
+-- User-owned finance rows need an auth user_id, so demo data lives in app code
+-- until a local user signs in.

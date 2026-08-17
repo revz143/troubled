@@ -1,14 +1,31 @@
 # Hinga Deployment Notes
 
-## Local setup with host Node
+## Local Database
+
+Local development uses the Supabase CLI Docker stack for Postgres, Auth, Studio, and the REST API.
+This project uses a custom `544xx` port block to avoid collisions with other local Supabase projects.
+
+```bash
+pnpm supabase:start
+pnpm supabase:reset
+pnpm supabase:status
+```
+
+Useful local endpoints:
+
+- App API URL: `http://127.0.0.1:54421`
+- Direct Postgres URL: `postgresql://postgres:postgres@127.0.0.1:54422/postgres`
+- Supabase Studio: `http://127.0.0.1:54423`
+- Email inbox for magic links: `http://127.0.0.1:54424`
+
+Copy `.env.example` to `.env.local`, then set `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from `pnpm supabase:status`.
+
+## Local Setup With Host Node
 
 1. Install dependencies with `pnpm install`.
-2. Create a Supabase project.
-3. Run `supabase/migrations/202608170001_initial_hinga_schema.sql` against the project.
-4. Copy `.env.example` to `.env.local` and fill in:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-5. Run `pnpm dev`.
+2. Start the local database with the commands above.
+3. Copy `.env.example` to `.env.local` and set the local publishable key.
+4. Run `pnpm dev` and open `http://localhost:3001`.
 
 ## Local setup with Docker
 
@@ -17,13 +34,11 @@ The app can run in a Docker container while Supabase local runs through the Supa
 1. Start Supabase local services:
 
 ```bash
-supabase start
-supabase db reset
+pnpm supabase:start
+pnpm supabase:reset
 ```
 
-If the Supabase CLI is not installed globally, use `pnpm dlx supabase start` and `pnpm dlx supabase db reset`.
-
-2. Copy `.env.docker.example` to `.env.docker` and set `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from `supabase status`.
+2. Copy `.env.docker.example` to `.env.docker` and set `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from `pnpm supabase:status`.
 
 3. Start the Next.js dev container:
 
@@ -31,7 +46,7 @@ If the Supabase CLI is not installed globally, use `pnpm dlx supabase start` and
 docker compose --env-file .env.docker up app
 ```
 
-For UI-only work, you can omit Supabase values and the app will run with seeded demo data.
+The container maps host port `3001` to app port `3000`, so open `http://localhost:3001`. For UI-only work, you can omit Supabase values and the app will run with seeded demo data.
 
 ## Checks
 

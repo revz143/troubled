@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@10.28.0",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
     "docker:build": "docker compose build app",
     "docker:dev": "docker compose up app",
     "build": "next build",
@@ -15,8 +15,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "supabase:start": "supabase start",
-    "supabase:reset": "supabase db reset"
+    "supabase:start": "pnpm dlx supabase start",
+    "supabase:status": "pnpm dlx supabase status",
+    "supabase:reset": "pnpm dlx supabase db reset",
+    "supabase:stop": "pnpm dlx supabase stop"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

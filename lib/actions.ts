@@ -6,11 +6,17 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
 import {
   accountSchema,
+  accountUpdateSchema,
   formDataToObject,
+  idSchema,
   incomeEntrySchema,
+  incomeEntryUpdateSchema,
   incomeSourceSchema,
+  incomeSourceUpdateSchema,
   obligationSchema,
+  obligationUpdateSchema,
   paymentSchema,
+  paymentUpdateSchema,
   settingsSchema,
 } from "@/lib/schemas";
 
@@ -29,6 +35,14 @@ async function currentUserId() {
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) throw new Error("You need to sign in again.");
   return { supabase, userId: data.user.id };
+}
+
+function revalidateFinancePaths() {
+  revalidatePath("/");
+  revalidatePath("/forecast");
+  revalidatePath("/income");
+  revalidatePath("/plan");
+  revalidatePath("/settings");
 }
 
 export async function createObligationAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -61,6 +75,49 @@ export async function createObligationAction(_prev: ActionState, formData: FormD
   return { ok: true, message: "Obligation added. One less loose thread." };
 }
 
+export async function updateObligationAction(formData: FormData): Promise<void> {
+  const parsed = obligationUpdateSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success || !isSupabaseConfigured()) return;
+
+  const { supabase, userId } = await currentUserId();
+  const { id, remaining_principal, ...obligation } = parsed.data;
+  const { error } = await supabase
+    .from("obligations")
+    .update(obligation)
+    .eq("user_id", userId)
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+
+  if (obligation.type === "debt" || obligation.type === "credit_card") {
+    if (remaining_principal) {
+      const { error: debtError } = await supabase.from("debt_details").upsert({
+        obligation_id: id,
+        original_balance: remaining_principal,
+        remaining_principal,
+      });
+      if (debtError) throw new Error(debtError.message);
+    }
+  } else {
+    await supabase.from("debt_details").delete().eq("obligation_id", id);
+  }
+
+  revalidateFinancePaths();
+}
+
+export async function archiveObligationAction(formData: FormData): Promise<void> {
+  const parsed = idSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success || formData.get("confirm_archive") !== "on" || !isSupabaseConfigured()) return;
+
+  const { supabase, userId } = await currentUserId();
+  const { error } = await supabase
+    .from("obligations")
+    .update({ is_active: false })
+    .eq("user_id", userId)
+    .eq("id", parsed.data.id);
+  if (error) throw new Error(error.message);
+  revalidateFinancePaths();
+}
+
 export async function createIncomeEntryAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = incomeEntrySchema.safeParse(formDataToObject(formData));
   if (!parsed.success) return { ok: false, message: "Please check the income details." };
@@ -74,6 +131,35 @@ export async function createIncomeEntryAction(_prev: ActionState, formData: Form
   revalidatePath("/income");
   revalidatePath("/forecast");
   return { ok: true, message: "Income added without double-counting it." };
+}
+
+export async function updateIncomeEntryAction(formData: FormData): Promise<void> {
+  const parsed = incomeEntryUpdateSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success || !isSupabaseConfigured()) return;
+
+  const { supabase, userId } = await currentUserId();
+  const { id, ...incomeEntry } = parsed.data;
+  const { error } = await supabase
+    .from("income_entries")
+    .update(incomeEntry)
+    .eq("user_id", userId)
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidateFinancePaths();
+}
+
+export async function deleteIncomeEntryAction(formData: FormData): Promise<void> {
+  const parsed = idSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success || formData.get("confirm_delete") !== "on" || !isSupabaseConfigured()) return;
+
+  const { supabase, userId } = await currentUserId();
+  const { error } = await supabase
+    .from("income_entries")
+    .delete()
+    .eq("user_id", userId)
+    .eq("id", parsed.data.id);
+  if (error) throw new Error(error.message);
+  revalidateFinancePaths();
 }
 
 export async function createIncomeSourceAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -92,6 +178,35 @@ export async function createIncomeSourceAction(_prev: ActionState, formData: For
   return { ok: true, message: "Recurring income added." };
 }
 
+export async function updateIncomeSourceAction(formData: FormData): Promise<void> {
+  const parsed = incomeSourceUpdateSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success || !isSupabaseConfigured()) return;
+
+  const { supabase, userId } = await currentUserId();
+  const { id, ...incomeSource } = parsed.data;
+  const { error } = await supabase
+    .from("income_sources")
+    .update(incomeSource)
+    .eq("user_id", userId)
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidateFinancePaths();
+}
+
+export async function archiveIncomeSourceAction(formData: FormData): Promise<void> {
+  const parsed = idSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success || formData.get("confirm_archive") !== "on" || !isSupabaseConfigured()) return;
+
+  const { supabase, userId } = await currentUserId();
+  const { error } = await supabase
+    .from("income_sources")
+    .update({ is_active: false })
+    .eq("user_id", userId)
+    .eq("id", parsed.data.id);
+  if (error) throw new Error(error.message);
+  revalidateFinancePaths();
+}
+
 export async function createAccountAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = accountSchema.safeParse(formDataToObject(formData));
   if (!parsed.success) return { ok: false, message: "Please check the account details." };
@@ -106,26 +221,116 @@ export async function createAccountAction(_prev: ActionState, formData: FormData
   return { ok: true, message: "Account added." };
 }
 
+export async function createAccountFormAction(formData: FormData): Promise<void> {
+  await createAccountAction({ ok: false, message: "" }, formData);
+}
+
+export async function updateAccountAction(formData: FormData): Promise<void> {
+  const parsed = accountUpdateSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success || !isSupabaseConfigured()) return;
+
+  const { supabase, userId } = await currentUserId();
+  const { id, ...account } = parsed.data;
+  const { error } = await supabase
+    .from("accounts")
+    .update(account)
+    .eq("user_id", userId)
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidateFinancePaths();
+}
+
+export async function archiveAccountAction(formData: FormData): Promise<void> {
+  const parsed = idSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success || formData.get("confirm_archive") !== "on" || !isSupabaseConfigured()) return;
+
+  const { supabase, userId } = await currentUserId();
+  const { error } = await supabase
+    .from("accounts")
+    .update({ is_active: false })
+    .eq("user_id", userId)
+    .eq("id", parsed.data.id);
+  if (error) throw new Error(error.message);
+  revalidateFinancePaths();
+}
+
 export async function recordPaymentAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = paymentSchema.safeParse(formDataToObject(formData));
   if (!parsed.success) return { ok: false, message: "Please check the payment details." };
   if (!isSupabaseConfigured()) return demoState;
 
   const { supabase, userId } = await currentUserId();
+  const [accountResult, obligationResult] = await Promise.all([
+    supabase.from("accounts").select("id").eq("user_id", userId).eq("id", parsed.data.account_id).maybeSingle(),
+    supabase.from("obligations").select("id").eq("user_id", userId).eq("id", parsed.data.obligation_id).maybeSingle(),
+  ]);
+
+  if (accountResult.error || obligationResult.error) {
+    return { ok: false, message: accountResult.error?.message ?? obligationResult.error?.message ?? "Unable to verify payment ownership." };
+  }
+
+  if (!accountResult.data || !obligationResult.data) {
+    return { ok: false, message: "Choose one of your accounts and obligations before recording the payment." };
+  }
+
   const { error } = await supabase.from("transactions").insert({
     ...parsed.data,
     idempotency_key: parsed.data.idempotency_key ?? `manual-${randomUUID()}`,
     user_id: userId,
     direction: "debit",
-    transaction_type: "debt_payment",
+    transaction_type: "obligation_payment",
   });
 
-  if (error) return { ok: false, message: error.message };
+  if (error) {
+    if (error.code === "23505") return { ok: true, message: "That payment was already recorded once." };
+    return { ok: false, message: error.message };
+  }
 
   revalidatePath("/");
   revalidatePath("/forecast");
   revalidatePath("/plan");
-  return { ok: true, message: "Payment recorded once." };
+  return { ok: true, message: "Payment recorded and linked to the obligation." };
+}
+
+export async function updatePaymentAction(formData: FormData): Promise<void> {
+  const parsed = paymentUpdateSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success || !isSupabaseConfigured()) return;
+
+  const { supabase, userId } = await currentUserId();
+  const [accountResult, obligationResult] = await Promise.all([
+    supabase.from("accounts").select("id").eq("user_id", userId).eq("id", parsed.data.account_id).maybeSingle(),
+    supabase.from("obligations").select("id").eq("user_id", userId).eq("id", parsed.data.obligation_id).maybeSingle(),
+  ]);
+  if (!accountResult.data || !obligationResult.data || accountResult.error || obligationResult.error) {
+    throw new Error("Choose one of your accounts and obligations before updating the payment.");
+  }
+
+  const { id, ...payment } = parsed.data;
+  const { error } = await supabase
+    .from("transactions")
+    .update({
+      ...payment,
+      direction: "debit",
+      transaction_type: "obligation_payment",
+    })
+    .eq("user_id", userId)
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidateFinancePaths();
+}
+
+export async function deletePaymentAction(formData: FormData): Promise<void> {
+  const parsed = idSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success || formData.get("confirm_delete") !== "on" || !isSupabaseConfigured()) return;
+
+  const { supabase, userId } = await currentUserId();
+  const { error } = await supabase
+    .from("transactions")
+    .delete()
+    .eq("user_id", userId)
+    .eq("id", parsed.data.id);
+  if (error) throw new Error(error.message);
+  revalidateFinancePaths();
 }
 
 export async function updateSettingsAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

@@ -12,6 +12,9 @@ export type ForecastObligation = {
   endDate: string | null;
   dueDay: number;
   frequency: Frequency;
+  notes?: string | null;
+  carryoverAmount?: Centavos;
+  prepaidAmount?: Centavos;
   remainingPrincipal?: Centavos;
   manualPayoffDate?: string | null;
 };
@@ -37,6 +40,7 @@ export type ForecastIncomeEntry = {
 
 export type ForecastTransaction = {
   id: string;
+  accountId?: string | null;
   amount: Centavos;
   direction: "credit" | "debit";
   occurredDate: string;

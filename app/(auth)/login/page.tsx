@@ -4,7 +4,7 @@ import { signInWithEmail } from "@/app/(auth)/actions";
 import { isSupabaseConfigured } from "@/lib/env";
 
 type Props = {
-  searchParams: Promise<{ sent?: string }>;
+  searchParams: Promise<{ error?: string; sent?: string }>;
 };
 
 export default async function LoginPage({ searchParams }: Props) {
@@ -24,6 +24,11 @@ export default async function LoginPage({ searchParams }: Props) {
         {params.sent ? (
           <p className="mt-4 rounded-lg bg-sage/40 p-3 text-sm leading-6 text-moss-deep" role="status">
             Check your email for the sign-in link.
+          </p>
+        ) : null}
+        {params.error ? (
+          <p className="mt-4 rounded-lg bg-coral-soft/60 p-3 text-sm leading-6 text-moss-deep" role="alert">
+            Sign-in link could not be used: {params.error}
           </p>
         ) : null}
         {!configured ? (

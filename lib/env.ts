@@ -6,6 +6,7 @@ export function getSupabaseEnv() {
 }
 
 export function isSupabaseConfigured() {
+  if (process.env.HINGA_FORCE_DEMO === "1") return false;
   const env = getSupabaseEnv();
   return Boolean(env.url && env.publishableKey);
 }

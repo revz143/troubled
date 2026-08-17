@@ -5,6 +5,7 @@ import { todayInTimeZone } from "@/lib/dates";
 import { parseMoneyToCentavos } from "@/lib/money";
 import { buildForecast } from "@/lib/forecast/engine";
 import type { ForecastInput } from "@/lib/forecast/types";
+import { buildObligationBillingSummaries } from "@/lib/billing/ledger";
 import { getDemoSnapshot } from "@/lib/data/mock";
 
 export async function getFinanceSnapshot(options: { horizonMonths?: 3 | 6 | 12; scenarioMonthlyIncome?: number } = {}) {
@@ -56,6 +57,35 @@ export async function getFinanceSnapshot(options: { horizonMonths?: 3 | 6 | 12; 
       const amount = parseMoneyToCentavos(transaction.amount);
       return sum + (transaction.direction === "credit" ? amount : -amount);
     }, 0);
+  const activeObligations = (obligationsResult.data ?? []).filter((item) => item.is_active).map((item) => {
+    const debt = debtByObligation.get(item.id);
+    return {
+      id: item.id,
+      name: item.name,
+      type: item.type,
+      amount: parseMoneyToCentavos(item.scheduled_amount),
+      startDate: item.start_date,
+      endDate: item.end_date,
+      dueDay: item.due_day,
+      frequency: item.frequency,
+      notes: item.notes,
+      remainingPrincipal: debt ? parseMoneyToCentavos(debt.remaining_principal) : undefined,
+      manualPayoffDate: debt?.manual_payoff_date ?? null,
+    };
+  });
+  const postedTransactions = transactions.map((item) => ({
+    id: item.id,
+    accountId: item.account_id,
+    amount: parseMoneyToCentavos(item.amount),
+    direction: item.direction,
+    occurredDate: item.occurred_date,
+    transactionType: item.transaction_type,
+    obligationId: item.obligation_id,
+    incomeEntryId: item.income_entry_id,
+  }));
+  const obligationBilling = buildObligationBillingSummaries(activeObligations, postedTransactions, today);
+  const carryoverByObligation = new Map(obligationBilling.map((item) => [item.id, item.carryoverAmount]));
+  const prepaidByObligation = new Map(obligationBilling.map((item) => [item.id, item.prepaidAmount]));
 
   const forecastInput: ForecastInput = {
     today,
@@ -63,21 +93,11 @@ export async function getFinanceSnapshot(options: { horizonMonths?: 3 | 6 | 12; 
     horizonMonths,
     scenarioMonthlyIncome,
     availableCash,
-    obligations: (obligationsResult.data ?? []).filter((item) => item.is_active).map((item) => {
-      const debt = debtByObligation.get(item.id);
-      return {
-        id: item.id,
-        name: item.name,
-        type: item.type,
-        amount: parseMoneyToCentavos(item.scheduled_amount),
-        startDate: item.start_date,
-        endDate: item.end_date,
-        dueDay: item.due_day,
-        frequency: item.frequency,
-        remainingPrincipal: debt ? parseMoneyToCentavos(debt.remaining_principal) : undefined,
-        manualPayoffDate: debt?.manual_payoff_date ?? null,
-      };
-    }),
+    obligations: activeObligations.map((item) => ({
+      ...item,
+      carryoverAmount: carryoverByObligation.get(item.id) ?? 0,
+      prepaidAmount: prepaidByObligation.get(item.id) ?? 0,
+    })),
     incomeSources: (incomeSourcesResult.data ?? []).filter((item) => item.is_active).map((item) => ({
       id: item.id,
       name: item.name,
@@ -95,15 +115,7 @@ export async function getFinanceSnapshot(options: { horizonMonths?: 3 | 6 | 12; 
       status: item.status,
       note: item.source_note ?? "",
     })),
-    postedTransactions: transactions.map((item) => ({
-      id: item.id,
-      amount: parseMoneyToCentavos(item.amount),
-      direction: item.direction,
-      occurredDate: item.occurred_date,
-      transactionType: item.transaction_type,
-      obligationId: item.obligation_id,
-      incomeEntryId: item.income_entry_id,
-    })),
+    postedTransactions,
   };
 
   return {
@@ -114,13 +126,30 @@ export async function getFinanceSnapshot(options: { horizonMonths?: 3 | 6 | 12; 
       reminderLeadDays: settings.reminder_lead_days,
       privacyMode: settings.privacy_mode,
     },
+    today,
     accounts: accounts.map((account) => ({
       id: account.id,
       name: account.name,
       accountType: account.account_type,
+      openingBalance: parseMoneyToCentavos(account.opening_balance),
       balance: parseMoneyToCentavos(account.opening_balance),
+      balanceAsOf: account.balance_as_of,
+      isActive: account.is_active,
     })),
     obligations: forecastInput.obligations,
+    obligationBilling,
+    paymentTransactions: postedTransactions
+      .filter((transaction) => transaction.direction === "debit" && transaction.obligationId)
+      .slice()
+      .sort((left, right) => right.occurredDate.localeCompare(left.occurredDate))
+      .map((transaction) => ({
+        id: transaction.id,
+        accountId: transaction.accountId ?? "",
+        obligationId: transaction.obligationId ?? "",
+        amount: transaction.amount,
+        occurredDate: transaction.occurredDate,
+        description: transactions.find((item) => item.id === transaction.id)?.description ?? "",
+      })),
     incomeSources: forecastInput.incomeSources,
     incomeEntries: forecastInput.incomeEntries,
     availableCash,

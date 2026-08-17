@@ -1,6 +1,12 @@
 import { Download, Upload } from "lucide-react";
-import { updateSettingsFormAction } from "@/lib/actions";
+import {
+  archiveAccountAction,
+  createAccountFormAction,
+  updateAccountAction,
+  updateSettingsFormAction,
+} from "@/lib/actions";
 import { getFinanceSnapshot } from "@/lib/data/finance";
+import { centavosToDecimal, formatPeso } from "@/lib/money";
 
 export default async function SettingsPage() {
   const snapshot = await getFinanceSnapshot();
@@ -27,6 +33,64 @@ export default async function SettingsPage() {
       </section>
 
       <section className="paper-panel rounded-lg p-4">
+        <h2 className="font-serif-display text-2xl font-semibold text-moss-deep">Accounts</h2>
+        <div className="mt-4 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+          <form action={createAccountFormAction} className="grid gap-3 rounded-lg border border-line/70 bg-paper-soft/60 p-3">
+            <h3 className="font-bold text-moss-deep">Add account</h3>
+            <label className="grid gap-1 text-sm font-semibold text-moss-deep">Name<input className="field" name="name" placeholder="Everyday cash" required /></label>
+            <label className="grid gap-1 text-sm font-semibold text-moss-deep">Type
+              <select className="field" name="account_type" defaultValue="cash">
+                <option value="cash">Cash</option>
+                <option value="bank">Bank</option>
+                <option value="e_wallet">E-wallet</option>
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm font-semibold text-moss-deep">Opening balance<input className="field" name="opening_balance" inputMode="decimal" placeholder="1000.00" required /></label>
+            <label className="grid gap-1 text-sm font-semibold text-moss-deep">Balance as of<input className="field" name="balance_as_of" type="date" defaultValue={snapshot.today} required /></label>
+            <button className="btn btn-primary" type="submit">Add account</button>
+          </form>
+          <div className="grid gap-3">
+            {snapshot.accounts.map((account) => (
+              <article key={account.id} className="rounded-lg border border-line/70 bg-paper-soft/60 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-bold text-moss-deep">{account.name}</p>
+                    <p className="mt-1 text-sm capitalize text-ink-muted">{account.accountType.replace("_", "-")} · as of {account.balanceAsOf}</p>
+                  </div>
+                  <p className="font-bold text-coral">{formatPeso(account.openingBalance, snapshot.settings.privacyMode)}</p>
+                </div>
+                <details className="mt-3 rounded-lg border border-line/70 bg-paper/70 p-3">
+                  <summary className="cursor-pointer text-sm font-bold text-moss-deep">Edit account</summary>
+                  <form action={updateAccountAction} className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <input name="id" type="hidden" value={account.id} />
+                    <label className="grid gap-1 text-sm font-semibold text-moss-deep">Name<input className="field" name="name" defaultValue={account.name} required /></label>
+                    <label className="grid gap-1 text-sm font-semibold text-moss-deep">Type
+                      <select className="field" name="account_type" defaultValue={account.accountType}>
+                        <option value="cash">Cash</option>
+                        <option value="bank">Bank</option>
+                        <option value="e_wallet">E-wallet</option>
+                      </select>
+                    </label>
+                    <label className="grid gap-1 text-sm font-semibold text-moss-deep">Opening balance<input className="field" name="opening_balance" inputMode="decimal" defaultValue={centavosToDecimal(account.openingBalance)} required /></label>
+                    <label className="grid gap-1 text-sm font-semibold text-moss-deep">Balance as of<input className="field" name="balance_as_of" type="date" defaultValue={account.balanceAsOf} required /></label>
+                    <button className="btn btn-primary sm:col-span-2" type="submit">Save account</button>
+                  </form>
+                  <form action={archiveAccountAction} className="mt-3 grid gap-2 rounded-lg bg-coral-soft/50 p-3">
+                    <input name="id" type="hidden" value={account.id} />
+                    <label className="flex items-center gap-2 text-sm font-semibold text-moss-deep">
+                      <input name="confirm_archive" type="checkbox" required />
+                      Archive this account.
+                    </label>
+                    <button className="btn btn-coral" type="submit">Archive account</button>
+                  </form>
+                </details>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="paper-panel rounded-lg p-4">
         <h2 className="font-serif-display text-2xl font-semibold text-moss-deep">Data</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <a className="btn btn-secondary" href="/api/export"><Download size={18} aria-hidden />Export JSON</a>
@@ -36,7 +100,7 @@ export default async function SettingsPage() {
           </form>
         </div>
         <p className="mt-4 text-sm leading-6 text-ink-muted">
-          Destructive actions are intentionally absent from this first pass; when added, they must require explicit confirmation.
+          Destructive corrections require an explicit checkbox confirmation. Prefer archive for ongoing records so the history stays legible.
         </p>
       </section>
     </div>

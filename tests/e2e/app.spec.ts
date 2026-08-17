@@ -26,6 +26,37 @@ test("adds expected income through the demo-capable form", async ({ page }) => {
   await expect(page.getByText(/saved in demo mode|income added/i)).toBeVisible();
 });
 
+test("records a partial payment against a selected obligation", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /record payment/i }).click();
+  await page.getByTestId("payment-form").getByLabel("Obligation").selectOption("33333333-3333-4333-8333-333333333333");
+  await page.getByTestId("payment-form").getByLabel(/record a partial payment/i).check();
+  await page.getByTestId("payment-form").getByLabel("Amount").fill("500.00");
+  await page.getByTestId("payment-form").getByLabel("Payment date").fill("2026-08-17");
+  await page.getByTestId("payment-form").getByRole("button", { name: /record payment/i }).click();
+  await expect(page.getByText(/saved in demo mode|payment recorded/i)).toBeVisible();
+});
+
+test("shows edit controls for obligations, payments, income, and accounts", async ({ page }) => {
+  await page.goto("/plan");
+  await page.getByText("Edit obligation").first().click();
+  await expect(page.getByRole("button", { name: /save obligation/i }).first()).toBeVisible();
+
+  await page.goto("/");
+  await page.getByText("Edit payment").first().click();
+  await expect(page.getByRole("button", { name: /save payment/i }).first()).toBeVisible();
+
+  await page.goto("/income");
+  await page.getByText("Edit income entry").first().click();
+  await expect(page.getByRole("button", { name: /save income entry/i }).first()).toBeVisible();
+  await page.getByText("Edit recurring source").first().click();
+  await expect(page.getByRole("button", { name: /save recurring source/i }).first()).toBeVisible();
+
+  await page.goto("/settings");
+  await page.getByText("Edit account").first().click();
+  await expect(page.getByRole("button", { name: /save account/i }).first()).toBeVisible();
+});
+
 test("shows a forecast with breathing-room details", async ({ page }) => {
   await page.goto("/forecast?horizon=6&scenario=1000");
   await expect(page.getByRole("heading", { name: /look ahead/i })).toBeVisible();

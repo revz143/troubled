@@ -1,16 +1,16 @@
 import { AlertCircle, CalendarClock, HeartPulse } from "lucide-react";
 import { MetricCard } from "@/components/MetricCard";
 import { QuickActions } from "@/components/forms/ActionForms";
+import { deletePaymentAction, updatePaymentAction } from "@/lib/actions";
 import { getFinanceSnapshot } from "@/lib/data/finance";
-import { formatPeso } from "@/lib/money";
+import { centavosToDecimal, formatPeso } from "@/lib/money";
 
 export default async function TodayPage() {
   const snapshot = await getFinanceSnapshot({ horizonMonths: 3 });
   const privacy = snapshot.settings.privacyMode;
   const currentMonth = snapshot.forecast.months[0];
-  const dueSoon = snapshot.obligations.filter((item) => item.dueDay <= 25).slice(0, 3);
-  const accountId = snapshot.accounts[0]?.id;
-  const obligationId = snapshot.obligations[0]?.id;
+  const dueSoon = snapshot.obligationBilling.slice(0, 3);
+  const obligationsById = new Map(snapshot.obligations.map((item) => [item.id, item.name]));
 
   return (
     <div className="mx-auto grid max-w-4xl gap-5 lg:ml-52">
@@ -37,7 +37,7 @@ export default async function TodayPage() {
         <MetricCard label="This month closes at" value={currentMonth?.closingCash ?? 0} privacy={privacy} helper="Forecasted after upcoming income and obligations." />
       </div>
 
-      <QuickActions accountId={accountId} obligationId={obligationId} />
+      <QuickActions accounts={snapshot.accounts} paymentObligations={snapshot.obligationBilling} today={snapshot.today} />
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className="paper-panel rounded-lg p-4">
@@ -50,9 +50,15 @@ export default async function TodayPage() {
               <div key={item.id} className="rounded-lg border border-line/70 bg-paper-soft/60 p-3">
                 <div className="flex items-center justify-between gap-3">
                   <p className="font-bold text-moss-deep">{item.name}</p>
-                  <p className="font-bold text-coral">{formatPeso(item.amount, privacy)}</p>
+                  <p className="font-bold text-coral">{formatPeso(item.amountDueNow || item.amountDueNext, privacy)}</p>
                 </div>
-                <p className="mt-1 text-sm text-ink-muted">Due day {item.dueDay}</p>
+                <p className="mt-1 text-sm text-ink-muted">
+                  {item.amountDueNow > 0
+                    ? `${item.status === "partial" ? "Partially paid" : "Unpaid"} · carries ${formatPeso(item.carryoverAmount, privacy)} forward`
+                    : item.nextDueDate
+                      ? `Next due ${item.nextDueDate}`
+                      : "No upcoming date"}
+                </p>
               </div>
             )) : <p className="text-sm text-ink-muted">Nothing due soon. That space counts.</p>}
           </div>
@@ -79,6 +85,59 @@ export default async function TodayPage() {
               <p key={message} className="text-sm leading-6 text-ink-muted">{message}</p>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="paper-panel rounded-lg p-4">
+        <h2 className="font-serif-display text-2xl font-semibold text-moss-deep">Recent payments</h2>
+        <div className="mt-4 grid gap-3">
+          {snapshot.paymentTransactions.length ? snapshot.paymentTransactions.slice(0, 6).map((payment) => (
+            <article key={payment.id} className="rounded-lg border border-line/70 bg-paper-soft/60 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="font-bold text-moss-deep">{obligationsById.get(payment.obligationId) ?? "Obligation payment"}</p>
+                  <p className="mt-1 text-sm text-ink-muted">{payment.occurredDate} · {payment.description || "No note"}</p>
+                </div>
+                <p className="font-bold text-coral">{formatPeso(payment.amount, privacy)}</p>
+              </div>
+              <details className="mt-3 rounded-lg border border-line/70 bg-paper/70 p-3">
+                <summary className="cursor-pointer text-sm font-bold text-moss-deep">Edit payment</summary>
+                <form action={updatePaymentAction} className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <input name="id" type="hidden" value={payment.id} />
+                  <label className="grid gap-1 text-sm font-semibold text-moss-deep">Account
+                    <select className="field" name="account_id" defaultValue={payment.accountId}>
+                      {snapshot.accounts.map((account) => (
+                        <option key={account.id} value={account.id}>{account.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="grid gap-1 text-sm font-semibold text-moss-deep">Obligation
+                    <select className="field" name="obligation_id" defaultValue={payment.obligationId}>
+                      {snapshot.obligationBilling.map((obligation) => (
+                        <option key={obligation.id} value={obligation.id}>{obligation.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="grid gap-1 text-sm font-semibold text-moss-deep">Amount<input className="field" name="amount" inputMode="decimal" defaultValue={centavosToDecimal(payment.amount)} required /></label>
+                  <label className="grid gap-1 text-sm font-semibold text-moss-deep">Date<input className="field" name="occurred_date" type="date" defaultValue={payment.occurredDate} required /></label>
+                  <label className="grid gap-1 text-sm font-semibold text-moss-deep sm:col-span-2">Description<input className="field" name="description" defaultValue={payment.description} /></label>
+                  <button className="btn btn-primary sm:col-span-2" type="submit">Save payment</button>
+                </form>
+                <form action={deletePaymentAction} className="mt-3 grid gap-2 rounded-lg bg-coral-soft/50 p-3">
+                  <input name="id" type="hidden" value={payment.id} />
+                  <label className="flex items-center gap-2 text-sm font-semibold text-moss-deep">
+                    <input name="confirm_delete" type="checkbox" required />
+                    Delete this payment transaction.
+                  </label>
+                  <button className="btn btn-coral" type="submit">Delete payment</button>
+                </form>
+              </details>
+            </article>
+          )) : (
+            <p className="rounded-lg bg-sage/30 p-3 text-sm leading-6 text-ink-muted">
+              No payments recorded yet. When something is mistyped, this is where you’ll be able to fix it.
+            </p>
+          )}
         </div>
       </section>
     </div>

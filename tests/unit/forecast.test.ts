@@ -105,6 +105,52 @@ describe("buildForecast", () => {
     expect(result.firstShortfall).toEqual({ monthKey: "2026-08", amountNeeded: 1_000_00 });
   });
 
+  it("adds unpaid carryover to the next obligation occurrence once", () => {
+    const result = buildForecast({
+      ...baseInput,
+      today: "2026-08-17",
+      obligations: [
+        {
+          id: "internet",
+          name: "Internet",
+          type: "bill",
+          amount: 1_000_00,
+          carryoverAmount: 600_00,
+          startDate: "2026-08-01",
+          endDate: null,
+          dueDay: 25,
+          frequency: "monthly",
+        },
+      ],
+    });
+
+    expect(result.months[0]?.scheduledOutflows).toBe(1_600_00);
+    expect(result.months[1]?.scheduledOutflows).toBe(1_000_00);
+  });
+
+  it("uses prepaid payments to avoid forecasting the same bill twice", () => {
+    const result = buildForecast({
+      ...baseInput,
+      today: "2026-08-17",
+      obligations: [
+        {
+          id: "internet",
+          name: "Internet",
+          type: "bill",
+          amount: 1_000_00,
+          prepaidAmount: 1_000_00,
+          startDate: "2026-08-01",
+          endDate: null,
+          dueDay: 25,
+          frequency: "monthly",
+        },
+      ],
+    });
+
+    expect(result.months[0]?.scheduledOutflows).toBe(0);
+    expect(result.months[1]?.scheduledOutflows).toBe(1_000_00);
+  });
+
   it("applies scenario income without changing stored income inputs", () => {
     const result = buildForecast({ ...baseInput, scenarioMonthlyIncome: 2_000_00 });
     expect(result.months.map((month) => month.scenarioIncome)).toEqual([2_000_00, 2_000_00, 2_000_00]);

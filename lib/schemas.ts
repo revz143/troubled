@@ -6,6 +6,8 @@ const moneyString = z
   .string()
   .min(1)
   .transform((value) => centavosToDecimal(parseMoneyToCentavos(value)));
+const positiveMoneyString = moneyString.refine((value) => parseMoneyToCentavos(value) > 0);
+const uuidString = z.string().uuid();
 
 export const obligationSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -18,6 +20,9 @@ export const obligationSchema = z.object({
   notes: z.string().trim().max(500).optional().transform((value) => value || null),
   remaining_principal: moneyString.optional().or(z.literal("")).transform((value) => value || null),
 });
+export const obligationUpdateSchema = obligationSchema.extend({
+  id: uuidString,
+});
 
 export const incomeEntrySchema = z.object({
   amount: moneyString,
@@ -25,6 +30,9 @@ export const incomeEntrySchema = z.object({
   received_date: dateString.optional().or(z.literal("")).transform((value) => value || null),
   source_note: z.string().trim().max(160).optional().transform((value) => value || null),
   status: z.enum(["expected", "received", "cancelled"]),
+});
+export const incomeEntryUpdateSchema = incomeEntrySchema.extend({
+  id: uuidString,
 });
 
 export const incomeSourceSchema = z.object({
@@ -35,6 +43,9 @@ export const incomeSourceSchema = z.object({
   end_date: dateString.optional().or(z.literal("")).transform((value) => value || null),
   next_expected_date: dateString,
 });
+export const incomeSourceUpdateSchema = incomeSourceSchema.extend({
+  id: uuidString,
+});
 
 export const accountSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -42,14 +53,24 @@ export const accountSchema = z.object({
   opening_balance: moneyString,
   balance_as_of: dateString,
 });
+export const accountUpdateSchema = accountSchema.extend({
+  id: uuidString,
+});
 
 export const paymentSchema = z.object({
   account_id: z.string().uuid(),
   obligation_id: z.string().uuid(),
-  amount: moneyString,
+  amount: positiveMoneyString,
   occurred_date: dateString,
   description: z.string().trim().max(160).optional().transform((value) => value || null),
   idempotency_key: z.string().trim().min(8).max(160).optional(),
+});
+export const paymentUpdateSchema = paymentSchema.omit({ idempotency_key: true }).extend({
+  id: uuidString,
+});
+
+export const idSchema = z.object({
+  id: uuidString,
 });
 
 export const settingsSchema = z.object({

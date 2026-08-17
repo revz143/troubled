@@ -99,6 +99,8 @@ function debtBalance(obligations: ForecastObligation[]) {
 export function buildForecast(input: ForecastInput): ForecastResult {
   const start = parseDateOnly(input.today);
   const principalByDebt = new Map<string, Centavos>();
+  const prepaidByObligation = new Map<string, Centavos>();
+  const carryoverApplied = new Set<string>();
   const months: ForecastMonth[] = [];
   const milestoneMessages: string[] = [];
   const limitations = ["Debt payoff dates are principal-only estimates. APR is stored but full amortization is not included in this milestone."];
@@ -106,6 +108,9 @@ export function buildForecast(input: ForecastInput): ForecastResult {
   input.obligations.forEach((obligation) => {
     if (obligation.remainingPrincipal !== undefined) {
       principalByDebt.set(obligation.id, obligation.remainingPrincipal);
+    }
+    if (obligation.prepaidAmount) {
+      prepaidByObligation.set(obligation.id, obligation.prepaidAmount);
     }
   });
 
@@ -137,11 +142,19 @@ export function buildForecast(input: ForecastInput): ForecastResult {
       for (const date of dates) {
         if (!isInMonth(date, key)) continue;
         const isDebt = obligation.type === "debt" || obligation.type === "credit_card";
+        const carryover = carryoverApplied.has(obligation.id) ? 0 : obligation.carryoverAmount ?? 0;
+        const grossOccurrenceAmount = obligation.amount + carryover;
+        const prepaid = prepaidByObligation.get(obligation.id) ?? 0;
+        const occurrenceAmount = Math.max(0, grossOccurrenceAmount - prepaid);
+        if (prepaid > 0) {
+          prepaidByObligation.set(obligation.id, Math.max(0, prepaid - grossOccurrenceAmount));
+        }
+        if (carryover > 0) carryoverApplied.add(obligation.id);
 
         if (isDebt) {
           const remaining = principalByDebt.get(obligation.id) ?? 0;
           if (remaining <= 0) continue;
-          const payment = Math.min(obligation.amount, remaining);
+          const payment = Math.min(occurrenceAmount, remaining);
           principalByDebt.set(obligation.id, remaining - payment);
           monthlyDebtPayments += payment;
 
@@ -151,7 +164,7 @@ export function buildForecast(input: ForecastInput): ForecastResult {
             obligationsEnding.push({ id: obligation.id, name: obligation.name, amount: obligation.amount, estimated: true });
           }
         } else {
-          scheduledOutflows += obligation.amount;
+          scheduledOutflows += occurrenceAmount;
           if (obligation.endDate && isInMonth(obligation.endDate, key)) {
             obligationsEnding.push({ id: obligation.id, name: obligation.name, amount: obligation.amount, estimated: false });
           }
