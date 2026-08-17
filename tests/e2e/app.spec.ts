@@ -37,15 +37,21 @@ test("records a partial payment against a selected obligation", async ({ page })
   await expect(page.getByText(/saved in demo mode|payment recorded/i)).toBeVisible();
 });
 
-test("shows edit controls for obligations, payments, income, and accounts", async ({ page }) => {
+test("routes obligation and payment corrections through the obligation detail page", async ({ page }) => {
   await page.goto("/plan");
-  await page.getByText("Edit obligation").first().click();
+  await page.getByRole("link", { name: /family school support/i }).click();
+  await expect(page.getByRole("heading", { name: /family school support/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /save obligation/i }).first()).toBeVisible();
-
-  await page.goto("/");
-  await page.getByText("Edit payment").first().click();
+  await expect(page.getByRole("heading", { name: /payment history/i })).toBeVisible();
+  await page.getByText("Correct this payment").first().click();
   await expect(page.getByRole("button", { name: /save payment/i }).first()).toBeVisible();
 
+  await page.goto("/");
+  await page.getByRole("link", { name: /open family school support details/i }).click();
+  await expect(page.getByRole("heading", { name: /family school support/i })).toBeVisible();
+});
+
+test("shows edit controls for income and accounts", async ({ page }) => {
   await page.goto("/income");
   await page.getByText("Edit income entry").first().click();
   await expect(page.getByRole("button", { name: /save income entry/i }).first()).toBeVisible();

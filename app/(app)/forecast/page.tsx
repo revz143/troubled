@@ -16,10 +16,10 @@ export default async function ForecastPage({ searchParams }: Props) {
   const privacy = snapshot.settings.privacyMode;
 
   return (
-    <div className="mx-auto grid max-w-4xl gap-5 lg:ml-52">
-      <section className="paper-panel rounded-lg p-5 sm:p-7">
-        <p className="text-sm font-bold uppercase tracking-[0.2em] text-coral">Forecast</p>
-        <h1 className="mt-3 font-serif-display text-4xl font-semibold text-moss-deep">Look ahead without flinching.</h1>
+    <div className="mx-auto grid max-w-4xl gap-7 lg:ml-52">
+      <section className="paper-panel px-1 py-7 sm:px-3">
+        <p className="mono-label">Forecast</p>
+        <h1 className="mt-3 font-serif-display text-[40px] font-light text-moss-deep">Look ahead without flinching.</h1>
         <form className="mt-5 grid gap-3 sm:grid-cols-[1fr_1fr_auto]" action="/forecast">
           <label className="grid gap-1 text-sm font-semibold text-moss-deep">
             Horizon
@@ -52,14 +52,14 @@ export default async function ForecastPage({ searchParams }: Props) {
         </p>
       ) : null}
 
-      <section className="paper-panel rounded-lg p-4">
-        <h2 className="font-serif-display text-2xl font-semibold text-moss-deep">Month by month</h2>
-        <div className="mt-4 grid gap-3">
+      <section className="paper-panel px-1 py-5 sm:px-3">
+        <h2 className="font-serif-display text-[28px] font-light text-moss-deep">Month by month</h2>
+        <div className="mt-4">
           {snapshot.forecast.months.map((month) => (
-            <article key={month.key} className="rounded-lg border border-line/70 bg-paper-soft/60 p-3">
+            <article key={month.key} className="rule-row py-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h3 className="font-bold text-moss-deep">{month.label}</h3>
-                <p className="font-serif-display text-2xl font-semibold text-moss">{formatPeso(month.closingCash, privacy)}</p>
+                <p className="font-serif-display text-[28px] font-light text-moss">{formatPeso(month.closingCash, privacy)}</p>
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
                 <div><dt className="text-ink-muted">Income</dt><dd className="font-bold">{formatPeso(month.expectedIncome + month.scenarioIncome, privacy)}</dd></div>
@@ -72,8 +72,8 @@ export default async function ForecastPage({ searchParams }: Props) {
         </div>
       </section>
 
-      <section className="paper-panel rounded-lg p-4">
-        <h2 className="font-serif-display text-2xl font-semibold text-moss-deep">Breathing-room milestones</h2>
+      <section className="paper-panel px-1 py-5 sm:px-3">
+        <h2 className="font-serif-display text-[28px] font-light text-moss-deep">Breathing-room milestones</h2>
         <div className="mt-3 grid gap-2">
           {snapshot.forecast.milestoneMessages.length ? snapshot.forecast.milestoneMessages.map((message) => (
             <p key={message} className="rounded-lg bg-sage/30 p-3 text-sm leading-6 text-moss-deep">{message}</p>

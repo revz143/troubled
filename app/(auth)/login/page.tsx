@@ -12,12 +12,12 @@ export default async function LoginPage({ searchParams }: Props) {
   const configured = isSupabaseConfigured();
 
   return (
-    <main className="mx-auto grid min-h-screen w-full max-w-md place-items-center px-4 py-8">
-      <section className="paper-panel w-full rounded-lg p-6">
-        <div className="grid size-12 place-items-center rounded-lg bg-moss text-paper-soft">
+    <main className="mx-auto grid min-h-screen w-full max-w-md place-items-center px-5 py-8">
+      <section className="ledger-frame w-full rounded-[22px] p-7">
+        <div className="grid size-12 place-items-center rounded-[10px] border border-line/80 bg-paper-raised text-moss">
           <ShieldCheck size={24} aria-hidden />
         </div>
-        <h1 className="mt-5 font-serif-display text-4xl font-semibold leading-tight text-moss-deep">Your private Hinga room.</h1>
+        <h1 className="mt-5 font-serif-display text-[40px] font-light leading-tight text-moss-deep">Your private Hinga room.</h1>
         <p className="mt-3 text-sm leading-6 text-ink-muted">
           Sign in with a magic link. No password to remember, no finance data stored in the browser.
         </p>

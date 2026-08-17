@@ -14,12 +14,6 @@ import {
 
 const initialState: ActionState = { ok: false, message: "" };
 
-type AccountOption = {
-  id: string;
-  name: string;
-  accountType: string;
-};
-
 function Status({ state }: { state: ActionState }) {
   if (!state.message) return null;
   return (
@@ -127,16 +121,13 @@ export function IncomeSourceForm() {
 }
 
 export function PaymentForm({
-  accounts,
   obligations,
   today,
 }: {
-  accounts: AccountOption[];
   obligations: ObligationBillingSummary[];
   today: string;
 }) {
   const [state, action, pending] = useActionState(recordPaymentAction, initialState);
-  const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id ?? "");
   const [selectedObligationId, setSelectedObligationId] = useState(obligations[0]?.id ?? "");
   const [paymentMode, setPaymentMode] = useState<"full" | "partial">("full");
   const [partialAmount, setPartialAmount] = useState("");
@@ -147,23 +138,19 @@ export function PaymentForm({
   const fullAmount = selectedObligation ? selectedObligation.amountDueNow || selectedObligation.amountDueNext : 0;
   const amount = paymentMode === "full" ? centavosToDecimal(fullAmount) : partialAmount;
 
-  if (!accounts.length || !obligations.length) {
+  if (!obligations.length) {
     return (
       <div className="rounded-lg bg-sage/40 p-4 text-sm leading-6 text-moss-deep">
-        Add at least one account and one obligation first. Then payments can be tied to the exact bill or loan they belong to.
+        Add at least one obligation first. Then payments can be tied to the exact bill or loan they belong to.
       </div>
     );
   }
 
   return (
     <form action={action} className="grid gap-3" data-testid="payment-form">
-      <Field label="Pay from">
-        <select className="field" name="account_id" required value={selectedAccountId} onChange={(event) => setSelectedAccountId(event.target.value)}>
-          {accounts.map((account) => (
-            <option key={account.id} value={account.id}>{account.name}</option>
-          ))}
-        </select>
-      </Field>
+      <div className="rounded-lg border border-line/70 bg-sage/30 p-3 text-sm leading-6 text-moss-deep">
+        Payment source is optional. This records that an obligation was paid, without trying to maintain day-to-day account balances.
+      </div>
       <Field label="Obligation">
         <select
           className="field"
@@ -246,11 +233,9 @@ export function PaymentForm({
 }
 
 export function QuickActions({
-  accounts,
   paymentObligations,
   today,
 }: {
-  accounts: AccountOption[];
   paymentObligations: ObligationBillingSummary[];
   today: string;
 }) {
@@ -274,7 +259,7 @@ export function QuickActions({
             </div>
             {open === "income" ? <IncomeEntryForm /> : null}
             {open === "obligation" ? <ObligationForm /> : null}
-            {open === "payment" ? <PaymentForm accounts={accounts} obligations={paymentObligations} today={today} /> : null}
+            {open === "payment" ? <PaymentForm obligations={paymentObligations} today={today} /> : null}
           </div>
         </div>
       ) : null}

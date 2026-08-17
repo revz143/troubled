@@ -58,7 +58,6 @@ export const accountUpdateSchema = accountSchema.extend({
 });
 
 export const paymentSchema = z.object({
-  account_id: z.string().uuid(),
   obligation_id: z.string().uuid(),
   amount: positiveMoneyString,
   occurred_date: dateString,

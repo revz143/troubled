@@ -67,7 +67,7 @@ export const demoInput: ForecastInput = {
   postedTransactions: [
     {
         id: "66666666-6666-4666-8666-666666666666",
-      accountId: "77777777-7777-4777-8777-777777777777",
+      accountId: null,
       amount: 1_000_00,
       direction: "debit",
       occurredDate: "2026-08-16",
@@ -113,7 +113,7 @@ export function getDemoSnapshot(horizonMonths: 3 | 6 | 12 = 6, scenarioMonthlyIn
     paymentTransactions: [
       {
         id: "66666666-6666-4666-8666-666666666666",
-        accountId: "77777777-7777-4777-8777-777777777777",
+        accountId: null,
         obligationId: "33333333-3333-4333-8333-333333333333",
         amount: 1_000_00,
         occurredDate: "2026-08-16",

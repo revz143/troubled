@@ -54,6 +54,7 @@ export async function getFinanceSnapshot(options: { horizonMonths?: 3 | 6 | 12; 
   const transactions = transactionsResult.data ?? [];
   const availableCash = accounts.reduce((sum, account) => sum + parseMoneyToCentavos(account.opening_balance), 0) +
     transactions.reduce((sum, transaction) => {
+      if (!transaction.account_id) return sum;
       const amount = parseMoneyToCentavos(transaction.amount);
       return sum + (transaction.direction === "credit" ? amount : -amount);
     }, 0);
@@ -144,7 +145,7 @@ export async function getFinanceSnapshot(options: { horizonMonths?: 3 | 6 | 12; 
       .sort((left, right) => right.occurredDate.localeCompare(left.occurredDate))
       .map((transaction) => ({
         id: transaction.id,
-        accountId: transaction.accountId ?? "",
+        accountId: transaction.accountId ?? null,
         obligationId: transaction.obligationId ?? "",
         amount: transaction.amount,
         occurredDate: transaction.occurredDate,

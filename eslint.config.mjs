@@ -3,7 +3,7 @@ import nextTypescript from "eslint-config-next/typescript";
 
 const eslintConfig = [
   {
-    ignores: [".next-e2e/**", "supabase/.temp/**"],
+    ignores: [".codex-temp/**", ".next-e2e/**", "supabase/.temp/**"],
   },
   ...nextVitals,
   ...nextTypescript,

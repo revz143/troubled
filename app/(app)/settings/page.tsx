@@ -12,14 +12,14 @@ export default async function SettingsPage() {
   const snapshot = await getFinanceSnapshot();
 
   return (
-    <div className="mx-auto grid max-w-4xl gap-5 lg:ml-52">
-      <section className="paper-panel rounded-lg p-5 sm:p-7">
-        <p className="text-sm font-bold uppercase tracking-[0.2em] text-coral">Settings and data</p>
-        <h1 className="mt-3 font-serif-display text-4xl font-semibold text-moss-deep">Keep the room private and portable.</h1>
+    <div className="mx-auto grid max-w-4xl gap-7 lg:ml-52">
+      <section className="paper-panel px-1 py-7 sm:px-3">
+        <p className="mono-label">Settings and data</p>
+        <h1 className="mt-3 font-serif-display text-[40px] font-light text-moss-deep">Keep the room private and portable.</h1>
       </section>
 
-      <section className="paper-panel rounded-lg p-4">
-        <h2 className="font-serif-display text-2xl font-semibold text-moss-deep">Preferences</h2>
+      <section className="paper-panel px-1 py-5 sm:px-3">
+        <h2 className="font-serif-display text-[28px] font-light text-moss-deep">Preferences</h2>
         <form action={updateSettingsFormAction} className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1 text-sm font-semibold text-moss-deep">Currency<input className="field" name="currency" value="PHP" readOnly /></label>
           <label className="grid gap-1 text-sm font-semibold text-moss-deep">Timezone<input className="field" name="timezone" defaultValue={snapshot.settings.timezone} /></label>
@@ -32,8 +32,8 @@ export default async function SettingsPage() {
         </form>
       </section>
 
-      <section className="paper-panel rounded-lg p-4">
-        <h2 className="font-serif-display text-2xl font-semibold text-moss-deep">Accounts</h2>
+      <section className="paper-panel px-1 py-5 sm:px-3">
+        <h2 className="font-serif-display text-[28px] font-light text-moss-deep">Accounts</h2>
         <div className="mt-4 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
           <form action={createAccountFormAction} className="grid gap-3 rounded-lg border border-line/70 bg-paper-soft/60 p-3">
             <h3 className="font-bold text-moss-deep">Add account</h3>
@@ -49,15 +49,15 @@ export default async function SettingsPage() {
             <label className="grid gap-1 text-sm font-semibold text-moss-deep">Balance as of<input className="field" name="balance_as_of" type="date" defaultValue={snapshot.today} required /></label>
             <button className="btn btn-primary" type="submit">Add account</button>
           </form>
-          <div className="grid gap-3">
+          <div>
             {snapshot.accounts.map((account) => (
-              <article key={account.id} className="rounded-lg border border-line/70 bg-paper-soft/60 p-3">
+              <article key={account.id} className="rule-row py-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="font-bold text-moss-deep">{account.name}</p>
                     <p className="mt-1 text-sm capitalize text-ink-muted">{account.accountType.replace("_", "-")} · as of {account.balanceAsOf}</p>
                   </div>
-                  <p className="font-bold text-coral">{formatPeso(account.openingBalance, snapshot.settings.privacyMode)}</p>
+                  <p className="font-serif-display text-[21px] text-ink">{formatPeso(account.openingBalance, snapshot.settings.privacyMode)}</p>
                 </div>
                 <details className="mt-3 rounded-lg border border-line/70 bg-paper/70 p-3">
                   <summary className="cursor-pointer text-sm font-bold text-moss-deep">Edit account</summary>
@@ -90,8 +90,8 @@ export default async function SettingsPage() {
         </div>
       </section>
 
-      <section className="paper-panel rounded-lg p-4">
-        <h2 className="font-serif-display text-2xl font-semibold text-moss-deep">Data</h2>
+      <section className="paper-panel px-1 py-5 sm:px-3">
+        <h2 className="font-serif-display text-[28px] font-light text-moss-deep">Data</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <a className="btn btn-secondary" href="/api/export"><Download size={18} aria-hidden />Export JSON</a>
           <form action="/api/import" encType="multipart/form-data" method="post" className="grid gap-3 rounded-lg border border-line/70 bg-paper-soft/60 p-3">

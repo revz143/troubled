@@ -15,12 +15,12 @@ export function MetricCard({
 }) {
   const color = tone === "coral" ? "text-coral" : tone === "moss" ? "text-moss" : "text-ink";
   return (
-    <section className="paper-panel rounded-lg p-4">
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-ink-muted">{label}</p>
-      <p className={`mt-3 font-serif-display text-3xl font-semibold ${color}`}>
+    <section className="paper-panel px-1 py-5 sm:px-3">
+      <p className="mono-label">{label}</p>
+      <p className={`mt-3 font-serif-display text-[38px] font-light leading-none sm:text-[46px] ${color}`}>
         {typeof value === "number" ? formatPeso(value, privacy) : value}
       </p>
-      {helper ? <p className="mt-2 text-sm leading-6 text-ink-muted">{helper}</p> : null}
+      {helper ? <p className="mt-3 max-w-[34ch] text-[13px] leading-6 text-ink-muted">{helper}</p> : null}
     </section>
   );
 }

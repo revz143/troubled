@@ -137,7 +137,7 @@ export type Database = {
         Row: {
           id: string;
           user_id: string;
-          account_id: string;
+          account_id: string | null;
           amount: string;
           direction: "credit" | "debit";
           transaction_type: string;
@@ -154,7 +154,7 @@ export type Database = {
         Insert: {
           id?: string;
           user_id: string;
-          account_id: string;
+          account_id?: string | null;
           amount: string;
           direction: "credit" | "debit";
           transaction_type: string;

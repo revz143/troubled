@@ -260,21 +260,19 @@ export async function recordPaymentAction(_prev: ActionState, formData: FormData
   if (!isSupabaseConfigured()) return demoState;
 
   const { supabase, userId } = await currentUserId();
-  const [accountResult, obligationResult] = await Promise.all([
-    supabase.from("accounts").select("id").eq("user_id", userId).eq("id", parsed.data.account_id).maybeSingle(),
-    supabase.from("obligations").select("id").eq("user_id", userId).eq("id", parsed.data.obligation_id).maybeSingle(),
-  ]);
+  const obligationResult = await supabase
+    .from("obligations")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("id", parsed.data.obligation_id)
+    .maybeSingle();
 
-  if (accountResult.error || obligationResult.error) {
-    return { ok: false, message: accountResult.error?.message ?? obligationResult.error?.message ?? "Unable to verify payment ownership." };
-  }
-
-  if (!accountResult.data || !obligationResult.data) {
-    return { ok: false, message: "Choose one of your accounts and obligations before recording the payment." };
-  }
+  if (obligationResult.error) return { ok: false, message: obligationResult.error.message };
+  if (!obligationResult.data) return { ok: false, message: "Choose one of your obligations before recording the payment." };
 
   const { error } = await supabase.from("transactions").insert({
     ...parsed.data,
+    account_id: null,
     idempotency_key: parsed.data.idempotency_key ?? `manual-${randomUUID()}`,
     user_id: userId,
     direction: "debit",
@@ -297,19 +295,20 @@ export async function updatePaymentAction(formData: FormData): Promise<void> {
   if (!parsed.success || !isSupabaseConfigured()) return;
 
   const { supabase, userId } = await currentUserId();
-  const [accountResult, obligationResult] = await Promise.all([
-    supabase.from("accounts").select("id").eq("user_id", userId).eq("id", parsed.data.account_id).maybeSingle(),
-    supabase.from("obligations").select("id").eq("user_id", userId).eq("id", parsed.data.obligation_id).maybeSingle(),
-  ]);
-  if (!accountResult.data || !obligationResult.data || accountResult.error || obligationResult.error) {
-    throw new Error("Choose one of your accounts and obligations before updating the payment.");
-  }
+  const obligationResult = await supabase
+    .from("obligations")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("id", parsed.data.obligation_id)
+    .maybeSingle();
+  if (!obligationResult.data || obligationResult.error) throw new Error("Choose one of your obligations before updating the payment.");
 
   const { id, ...payment } = parsed.data;
   const { error } = await supabase
     .from("transactions")
     .update({
       ...payment,
+      account_id: null,
       direction: "debit",
       transaction_type: "obligation_payment",
     })
