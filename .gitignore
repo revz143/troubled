@@ -2,11 +2,14 @@
 
 # dependencies
 /node_modules
+/.pnpm-store
 /.pnp
 .pnp.js
 
 # testing
 /coverage
+/test-results
+/playwright-report
 
 # next.js
 /.next/
@@ -33,4 +36,3 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
